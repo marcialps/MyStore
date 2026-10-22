@@ -76,7 +76,7 @@ function escapeHtml(value) {
 }
 
 function icon(name, className = 'icon') {
-  return `<svg class="${className}" aria-hidden="true"><use href="/assets/icons.svg#i-${name}"></use></svg>`;
+  return `<svg class="${className}" aria-hidden="true"><use href="assets/icons.svg#i-${name}"></use></svg>`;
 }
 
 function getInitials(name) {
@@ -580,7 +580,7 @@ function renderDashboardView() {
         </div>
         <span class="super-store-chip">${icon('box')} ${metric.products == null ? '—' : metric.products}</span>
         <span class="super-store-chip">${icon('link')} ${metric.catalogs == null ? '—' : metric.catalogs}</span>
-        <a class="btn btn-sm btn-secondary" href="/index.html?loja=${encodeURIComponent(store.id)}">Abrir painel</a>
+        <a class="btn btn-sm btn-secondary" href="index.html?loja=${encodeURIComponent(store.id)}">Abrir painel</a>
       </div>
     `;
   }).join('');
@@ -697,7 +697,7 @@ function storeCardMarkup(store) {
         </div>
       </div>
       <div class="super-store-actions">
-        <a class="btn btn-sm btn-primary" href="/index.html?loja=${encodeURIComponent(store.id)}">${icon('arrow-up-right')} Abrir painel</a>
+        <a class="btn btn-sm btn-primary" href="index.html?loja=${encodeURIComponent(store.id)}">${icon('arrow-up-right')} Abrir painel</a>
         <button class="btn btn-sm btn-secondary" type="button" data-action="edit-store" data-id="${escapeHtml(store.id)}">${icon('edit')} Editar</button>
         <div class="super-icon-actions">
           <button class="icon-btn" type="button" data-action="reset-password" data-id="${escapeHtml(store.id)}" aria-label="Redefinir a senha de ${escapeHtml(store.name)}">${icon('refresh')}</button>
@@ -1189,7 +1189,8 @@ function openCredentialsModal(storeName, email, password) {
   const copyButton = modal.root.querySelector('[data-copy-credentials]');
   if (copyButton) {
     copyButton.addEventListener('click', async () => {
-      const copied = await copyText(`Acesso ao painel MyStore\nE-mail: ${email}\nSenha: ${password}\nEndereço: ${window.location.origin}/index.html`);
+      const panelUrl = new URL('index.html', window.location.href).href;
+      const copied = await copyText(`Acesso ao painel MyStore\nE-mail: ${email}\nSenha: ${password}\nEndereço: ${panelUrl}`);
       showToast(copied ? 'Dados copiados para a área de transferência.' : 'Não foi possível copiar os dados.', copied ? 'success' : 'error');
     });
   }

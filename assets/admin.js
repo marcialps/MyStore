@@ -108,7 +108,7 @@ function escapeHtml(value) {
 }
 
 function icon(name, className = 'icon') {
-  return `<svg class="${className}" aria-hidden="true"><use href="/assets/icons.svg#i-${name}"></use></svg>`;
+  return `<svg class="${className}" aria-hidden="true"><use href="assets/icons.svg#i-${name}"></use></svg>`;
 }
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -175,17 +175,24 @@ function getViewFromHash() {
   return entry ? entry[0] : 'overview';
 }
 
-// O Firebase Hosting já inclui o rewrite /c/** -> /catalog.html.
-// Em servidores locais (Live Server) não existe rewrite, então usamos a
-// versão com query string para o link funcionar durante o desenvolvimento.
-const PRETTY_CATALOG_URLS = !/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname);
+// O link bonito /c/{loja}/{catalogo} depende do rewrite do Firebase Hosting.
+// Em GitHub Pages, Live Server e outras hospedagens estáticas usamos o formato
+// com query string (catalog.html?loja=...&c=...), resolvido a partir da página
+// atual para funcionar também quando o site fica dentro de uma subpasta.
+function supportsPrettyCatalogUrls() {
+  return /\.(web\.app|firebaseapp\.com)$/i.test(window.location.hostname);
+}
 
 function getCatalogUrl(storeId, slug) {
   const store = storeId || state.storeId;
-  if (PRETTY_CATALOG_URLS) {
+  if (supportsPrettyCatalogUrls()) {
     return `${window.location.origin}/c/${encodeURIComponent(store)}/${encodeURIComponent(slug)}`;
   }
-  return `${window.location.origin}/catalog.html?loja=${encodeURIComponent(store)}&c=${encodeURIComponent(slug)}`;
+  const url = new URL('catalog.html', window.location.href);
+  url.search = '';
+  url.searchParams.set('loja', store);
+  url.searchParams.set('c', slug);
+  return url.href;
 }
 
 function storeRef() {
@@ -883,7 +890,7 @@ function showLogin(message = '') {
   loginPassword.value = '';
   loginPassword.type = 'password';
   togglePasswordBtn.setAttribute('aria-label', 'Mostrar senha');
-  togglePasswordBtn.querySelector('use').setAttribute('href', '/assets/icons.svg#i-eye');
+  togglePasswordBtn.querySelector('use').setAttribute('href', 'assets/icons.svg#i-eye');
   loginEmail.disabled = !firebaseConfigured;
   loginPassword.disabled = !firebaseConfigured;
   loginSubmit.disabled = !firebaseConfigured;
@@ -911,7 +918,7 @@ async function handleAuthenticatedUser(user) {
   const isSuper = isSuperAdminEmail(user.email);
 
   if (isSuper && !getRequestedStoreId()) {
-    window.location.replace('/super.html');
+    window.location.replace('super.html');
     return;
   }
 
@@ -936,7 +943,7 @@ async function handleAuthenticatedUser(user) {
     console.error(error);
     state.data = null;
     if (String(error && error.code) === 'app/redirect-portal') {
-      window.location.replace('/super.html');
+      window.location.replace('super.html');
       return;
     }
     pendingLoginMessage = String(error && error.code) === 'permission-denied'
@@ -1134,7 +1141,7 @@ function bindGlobalEvents() {
     const showing = loginPassword.type === 'text';
     loginPassword.type = showing ? 'password' : 'text';
     togglePasswordBtn.setAttribute('aria-label', showing ? 'Mostrar senha' : 'Ocultar senha');
-    togglePasswordBtn.querySelector('use').setAttribute('href', `/assets/icons.svg#${showing ? 'i-eye' : 'i-eye-off'}`);
+    togglePasswordBtn.querySelector('use').setAttribute('href', `assets/icons.svg#${showing ? 'i-eye' : 'i-eye-off'}`);
     loginPassword.focus();
   });
 
@@ -2249,7 +2256,7 @@ function renderAccountCard() {
             <span>Conectado como <strong>${escapeHtml(account.email || 'super administrador')}</strong>. Você está gerenciando a loja <strong>${escapeHtml(state.data.settings.storeName)}</strong>.</span>
           </div>
           <div class="settings-actions">
-            <a class="btn btn-secondary" href="/super.html">${icon('grid')} Voltar ao portal</a>
+            <a class="btn btn-secondary" href="super.html">${icon('grid')} Voltar ao portal</a>
           </div>
         </div>
       </section>

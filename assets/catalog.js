@@ -44,7 +44,7 @@ function escapeHtml(value) {
 }
 
 function icon(name) {
-  return `<svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-${name}"></use></svg>`;
+  return `<svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-${name}"></use></svg>`;
 }
 
 function formatPrice(value) {
