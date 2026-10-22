@@ -914,6 +914,39 @@ function showApp() {
   document.title = `MyStore — ${VIEW_LABEL[state.view] || 'Painel'}`;
 }
 
+// Cliente convidado pelo portal: no primeiro login com Google, cria o vínculo
+// users/{uid} a partir do convite storeInvites/{email} e apaga o convite.
+async function resolveClientInvite(user) {
+  const googleAccount = Array.isArray(user.providerData)
+    && user.providerData.some((provider) => provider && provider.providerId === 'google.com');
+  if (!googleAccount || !user.email) return;
+
+  const userRef = doc(db, 'users', user.uid);
+  const userSnap = await getDoc(userRef);
+  if (userSnap.exists()) return;
+
+  const inviteId = String(user.email).trim().toLowerCase();
+  const inviteRef = doc(db, 'storeInvites', inviteId);
+  const inviteSnap = await getDoc(inviteRef);
+  if (!inviteSnap.exists()) return;
+
+  const invite = inviteSnap.data() || {};
+  const storeId = String(invite.storeId || '').trim();
+  if (!storeId) return;
+
+  const now = new Date().toISOString();
+  await setDoc(userRef, {
+    role: 'client',
+    storeId,
+    name: invite.name || user.displayName || '',
+    email: user.email,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await deleteDoc(inviteRef).catch(() => {});
+  showToast('Acesso ativado com o Google. Bem-vindo(a) ao painel da sua loja!', 'success', 5000);
+}
+
 async function handleAuthenticatedUser(user) {
   const isSuper = isSuperAdminEmail(user.email);
 
@@ -922,14 +955,12 @@ async function handleAuthenticatedUser(user) {
     return;
   }
 
-  const googleAccount = Array.isArray(user.providerData)
-    && user.providerData.some((provider) => provider && provider.providerId === 'google.com');
-
-  if (googleAccount && !isSuper) {
-    state.data = null;
-    pendingLoginMessage = 'Esta conta Google não é o super administrador. Se você é cliente, entre com o e-mail e a senha criados pela loja.';
-    await signOut(auth).catch(() => {});
-    return;
+  if (!isSuper) {
+    try {
+      await resolveClientInvite(user);
+    } catch (claimError) {
+      console.error('Não foi possível ativar o convite do cliente:', claimError);
+    }
   }
 
   try {
@@ -946,9 +977,13 @@ async function handleAuthenticatedUser(user) {
       window.location.replace('super.html');
       return;
     }
+    const googleAccount = Array.isArray(user.providerData)
+      && user.providerData.some((provider) => provider && provider.providerId === 'google.com');
     pendingLoginMessage = String(error && error.code) === 'permission-denied'
       ? 'Sua conta não tem permissão para acessar esta loja. Confira o documento users/{uid} no Firestore.'
-      : firebaseErrorMessage(error, 'Não foi possível carregar os dados da loja.');
+      : (googleAccount && /vinculada/i.test(String(error && error.message))
+          ? 'Esta conta Google ainda não está vinculada a nenhuma loja. Entre com o e-mail exato do convite ou fale com o super administrador.'
+          : firebaseErrorMessage(error, 'Não foi possível carregar os dados da loja.'));
     await signOut(auth).catch(() => {});
   }
 }
@@ -2239,6 +2274,10 @@ function renderSettingsView() {
 
 function renderAccountCard() {
   const { auth: account } = state.data;
+  const currentUser = auth.currentUser;
+  const isGoogleAccount = Boolean(currentUser
+    && Array.isArray(currentUser.providerData)
+    && currentUser.providerData.some((provider) => provider && provider.providerId === 'google.com'));
 
   if (account.isSuperAdmin) {
     return `
@@ -2257,6 +2296,26 @@ function renderAccountCard() {
           </div>
           <div class="settings-actions">
             <a class="btn btn-secondary" href="super.html">${icon('grid')} Voltar ao portal</a>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  if (isGoogleAccount) {
+    return `
+      <section class="settings-card">
+        <div class="settings-card-head">
+          <div>
+            <h2>${icon('users')} Conta Google</h2>
+            <p>Acesso protegido pelo Google.</p>
+          </div>
+          <span class="settings-badge">Google</span>
+        </div>
+        <div class="settings-body">
+          <div class="security-note">
+            ${icon('users')}
+            <span>Conectado como <strong>${escapeHtml(account.email || 'cliente')}</strong>. Você entra no painel clicando em <strong>Entrar com Google</strong> — não é preciso senha.</span>
           </div>
         </div>
       </section>

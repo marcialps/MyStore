@@ -10,9 +10,6 @@ import {
   onAuthStateChanged,
   signOut,
   sendPasswordResetEmail,
-  createUserWithEmailAndPassword,
-  deleteUser,
-  getAuth,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
 import {
   collection,
@@ -24,14 +21,14 @@ import {
   deleteDoc,
   writeBatch,
 } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
-import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
 import { auth, db, firebaseConfigured, CONFIG_ERROR_MESSAGE } from './firebase.js';
-import { firebaseConfig, superAdminEmails } from './firebase-config.js';
+import { superAdminEmails } from './firebase-config.js';
 
 const state = {
   user: null,
   stores: [],
   users: [],
+  invites: [],
   metrics: {},
   metricsLoaded: false,
   view: 'dashboard',
@@ -116,13 +113,6 @@ function randomId() {
   const bytes = new Uint8Array(16);
   window.crypto.getRandomValues(bytes);
   return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
-function generatePassword(length = 10) {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  const bytes = new Uint8Array(length);
-  window.crypto.getRandomValues(bytes);
-  return [...bytes].map((byte) => alphabet[byte % alphabet.length]).join('');
 }
 
 function isAllowedEmail(email) {
@@ -374,6 +364,7 @@ async function handleLogout() {
   closeAllModals();
   state.stores = [];
   state.users = [];
+  state.invites = [];
   state.metrics = {};
   state.metricsLoaded = false;
   state.loaded = false;
@@ -392,14 +383,23 @@ function usersByStore() {
   return map;
 }
 
+function invitesByStore() {
+  const map = new Map();
+  state.invites.forEach((invite) => {
+    if (invite.storeId && !map.has(invite.storeId)) map.set(invite.storeId, invite);
+  });
+  return map;
+}
+
 function storeMetrics(storeId) {
   return state.metrics[storeId] || { products: null, catalogs: null };
 }
 
 async function loadData() {
-  const [storesSnap, usersSnap] = await Promise.all([
+  const [storesSnap, usersSnap, invitesSnap] = await Promise.all([
     getDocs(collection(db, 'stores')),
     getDocs(collection(db, 'users')),
+    getDocs(collection(db, 'storeInvites')),
   ]);
 
   state.stores = storesSnap.docs
@@ -412,6 +412,7 @@ async function loadData() {
         whatsapp: data.whatsapp || '',
         showPrices: data.showPrices !== false,
         status: data.status === 'paused' ? 'paused' : 'active',
+        authMode: data.authMode === 'google' ? 'google' : 'password',
         createdAt: data.createdAt || '',
         updatedAt: data.updatedAt || '',
       };
@@ -426,6 +427,16 @@ async function loadData() {
       storeId: data.storeId || '',
       name: data.name || '',
       email: data.email || '',
+    };
+  });
+
+  state.invites = invitesSnap.docs.map((inviteDoc) => {
+    const data = inviteDoc.data() || {};
+    return {
+      id: inviteDoc.id,
+      storeId: data.storeId || '',
+      email: data.email || inviteDoc.id,
+      name: data.name || '',
     };
   });
 
@@ -639,7 +650,7 @@ function renderDashboardView() {
               <span class="recent-icon">${icon('plus')}</span>
               <div class="recent-info">
                 <strong>1. Cadastre a loja e o cliente</strong>
-                <small>Informe nome da loja, e-mail e senha inicial de acesso.</small>
+                <small>Informe o nome da loja e o e-mail Google do cliente.</small>
               </div>
             </div>
             <div class="recent-row">
@@ -673,23 +684,31 @@ function filteredStores() {
     if (state.filter !== 'all' && store.status !== state.filter) return false;
     if (!query) return true;
     const client = usersByStore().get(store.id);
-    const haystack = `${store.name} ${store.id} ${client ? `${client.name} ${client.email}` : ''}`.toLowerCase();
+    const invite = invitesByStore().get(store.id);
+    const haystack = `${store.name} ${store.id} ${client ? `${client.name} ${client.email}` : ''} ${invite ? invite.email : ''}`.toLowerCase();
     return haystack.includes(query);
   });
 }
 
 function storeCardMarkup(store) {
   const client = usersByStore().get(store.id);
+  const invite = invitesByStore().get(store.id);
   const metric = storeMetrics(store.id);
+  const isGoogleMode = store.authMode === 'google';
+  const accessLabel = isGoogleMode ? 'Google' : 'E-mail e senha';
+  const clientLine = client
+    ? `${escapeHtml(client.name || 'Cliente')} · ${escapeHtml(client.email)}`
+    : (invite ? `Convite pendente · ${escapeHtml(invite.email)}` : 'Sem cliente vinculado');
   return `
     <article class="super-store-card">
       <div class="super-store-main">
         <span class="super-store-logo">${store.logo ? `<img src="${escapeHtml(store.logo)}" alt="">` : escapeHtml(getInitials(store.name))}</span>
         <div class="super-store-info">
           <h3>${escapeHtml(store.name)}</h3>
-          <p>${client ? `${escapeHtml(client.name || 'Cliente')} · ${escapeHtml(client.email)}` : 'Sem cliente vinculado'}</p>
+          <p>${clientLine}</p>
           <div class="super-store-meta">
             <span class="super-status ${store.status === 'active' ? '' : 'is-paused'}">${store.status === 'active' ? 'Ativa' : 'Pausada'}</span>
+            <span class="super-store-chip">${icon(isGoogleMode ? 'users' : 'lock')} ${accessLabel}</span>
             <span class="super-store-chip">${icon('box')} ${metric.products == null ? '—' : `${metric.products} produto${metric.products === 1 ? '' : 's'}`}</span>
             <span class="super-store-chip">${icon('link')} ${metric.catalogs == null ? '—' : `${metric.catalogs} catálogo${metric.catalogs === 1 ? '' : 's'}`}</span>
             <span class="super-store-chip">${icon('clock')} ${escapeHtml(formatDate(store.createdAt))}</span>
@@ -700,7 +719,7 @@ function storeCardMarkup(store) {
         <a class="btn btn-sm btn-primary" href="index.html?loja=${encodeURIComponent(store.id)}">${icon('arrow-up-right')} Abrir painel</a>
         <button class="btn btn-sm btn-secondary" type="button" data-action="edit-store" data-id="${escapeHtml(store.id)}">${icon('edit')} Editar</button>
         <div class="super-icon-actions">
-          <button class="icon-btn" type="button" data-action="reset-password" data-id="${escapeHtml(store.id)}" aria-label="Redefinir a senha de ${escapeHtml(store.name)}">${icon('refresh')}</button>
+          ${isGoogleMode ? '' : `<button class="icon-btn" type="button" data-action="reset-password" data-id="${escapeHtml(store.id)}" aria-label="Redefinir a senha de ${escapeHtml(store.name)}">${icon('refresh')}</button>`}
           <button class="icon-btn icon-btn-danger" type="button" data-action="delete-store" data-id="${escapeHtml(store.id)}" aria-label="Excluir a loja ${escapeHtml(store.name)}">${icon('trash')}</button>
         </div>
       </div>
@@ -742,7 +761,7 @@ function renderStoresView() {
         <div class="empty-state">
           <span class="empty-icon">${icon('store')}</span>
           <h2>${state.stores.length ? 'Nenhuma loja encontrada' : 'Comece cadastrando a primeira loja'}</h2>
-          <p>${state.stores.length ? 'Ajuste a busca ou o filtro para encontrar o cliente.' : 'Informe o nome da loja, o cliente e a senha inicial. O cliente recebe o acesso e monta o próprio catálogo.'}</p>
+          <p>${state.stores.length ? 'Ajuste a busca ou o filtro para encontrar o cliente.' : 'Informe o nome da loja e o e-mail Google do cliente. Ele entra sem senha e monta o próprio catálogo.'}</p>
           <button class="btn btn-primary" type="button" data-action="new-store">${icon('plus')} Nova loja</button>
         </div>
       `}
@@ -797,6 +816,7 @@ function renderReportsView() {
       <tr>
         <td><strong>${escapeHtml(store.name)}</strong><br><span class="super-muted-note">${escapeHtml(store.id)}</span></td>
         <td>${client ? escapeHtml(client.name || 'Cliente') : '—'}<br><span class="super-muted-note">${client ? escapeHtml(client.email) : ''}</span></td>
+        <td>${store.authMode === 'google' ? 'Google' : 'E-mail e senha'}</td>
         <td><span class="super-status ${store.status === 'active' ? '' : 'is-paused'}">${store.status === 'active' ? 'Ativa' : 'Pausada'}</span></td>
         <td>${metric.products == null ? '—' : metric.products}</td>
         <td>${metric.catalogs == null ? '—' : metric.catalogs}</td>
@@ -868,6 +888,7 @@ function renderReportsView() {
                 <tr>
                   <th>Loja</th>
                   <th>Cliente</th>
+                  <th>Acesso</th>
                   <th>Status</th>
                   <th>Produtos</th>
                   <th>Catálogos</th>
@@ -875,7 +896,7 @@ function renderReportsView() {
                 </tr>
               </thead>
               <tbody>
-                ${rows || '<tr><td class="super-table-empty" colspan="6">Nenhuma loja cadastrada ainda.</td></tr>'}
+                ${rows || '<tr><td class="super-table-empty" colspan="7">Nenhuma loja cadastrada ainda.</td></tr>'}
               </tbody>
             </table>
           </div>
@@ -903,11 +924,19 @@ async function buildUniqueStoreId(name) {
 function buildStoreFormMarkup(store) {
   const isEditing = Boolean(store);
   const client = isEditing ? usersByStore().get(store.id) : null;
+  const invite = isEditing ? invitesByStore().get(store.id) : null;
+  const canEditEmail = isEditing && store.authMode === 'google' && !client;
+  const emailValue = client ? client.email : (invite ? invite.email : '');
+  const emailHint = !isEditing
+    ? 'O cliente entra clicando em "Entrar com Google" usando exatamente este e-mail. Não é preciso senha.'
+    : (store.authMode === 'google'
+        ? (client ? 'O cliente já entrou com esta conta Google.' : 'Enquanto o cliente não entrar pela primeira vez, você pode corrigir o e-mail.')
+        : 'Este cliente entra com e-mail e senha. O e-mail não pode ser alterado.');
   return `
     <div class="modal-header">
       <div>
         <h2>${isEditing ? 'Editar loja' : 'Nova loja'}</h2>
-        <p>${isEditing ? 'Atualize os dados do cliente e o status da loja.' : 'Crie o acesso do cliente e a loja dele no portal.'}</p>
+        <p>${isEditing ? 'Atualize os dados do cliente e o status da loja.' : 'Crie a loja e o convite Google do cliente — sem senha.'}</p>
       </div>
       <button class="icon-btn modal-close" type="button" data-modal-close aria-label="Fechar">${icon('x')}</button>
     </div>
@@ -950,27 +979,22 @@ function buildStoreFormMarkup(store) {
         </div>
 
         <p class="form-section-label">Cliente</p>
+        ${!isEditing ? `
+          <div class="notice">
+            ${icon('users')}
+            <span>O cliente entra no painel com a própria conta Google — <strong>sem senha</strong>. Use um e-mail que ele já acessa.</span>
+          </div>
+        ` : ''}
         <div class="form-grid">
           <div class="form-group">
             <label class="field-label" for="sa-client-name">Nome do cliente <span class="required-mark">*</span></label>
-            <input class="text-input" id="sa-client-name" type="text" maxlength="80" required value="${escapeHtml(client ? client.name : '')}" placeholder="Ex.: João Silva">
+            <input class="text-input" id="sa-client-name" type="text" maxlength="80" required value="${escapeHtml(client ? client.name : (invite && invite.name ? invite.name : ''))}" placeholder="Ex.: João Silva">
           </div>
           <div class="form-group">
-            <label class="field-label" for="sa-client-email">E-mail de acesso <span class="required-mark">*</span></label>
-            <input class="text-input" id="sa-client-email" type="email" autocomplete="off" required ${isEditing ? 'disabled' : ''} value="${escapeHtml(client ? client.email : '')}" placeholder="cliente@exemplo.com">
-            ${isEditing ? '<p class="field-hint">O e-mail não pode ser alterado depois do cadastro.</p>' : ''}
+            <label class="field-label" for="sa-client-email">E-mail Google do cliente <span class="required-mark">*</span></label>
+            <input class="text-input" id="sa-client-email" type="email" autocomplete="off" required ${isEditing && !canEditEmail ? 'disabled' : ''} value="${escapeHtml(emailValue)}" placeholder="cliente@gmail.com">
+            <p class="field-hint">${emailHint}</p>
           </div>
-          ${isEditing ? '' : `
-            <div class="form-group span-2">
-              <label class="field-label" for="sa-client-password">Senha inicial <span class="required-mark">*</span></label>
-              <div class="super-password-field">
-                <input class="text-input" id="sa-client-password" type="text" minlength="6" required value="${escapeHtml(generatePassword(10))}" placeholder="Mínimo de 6 caracteres">
-                <button class="btn btn-secondary" type="button" data-action="generate-password">${icon('refresh')} Gerar</button>
-                <button class="btn btn-secondary" type="button" data-action="copy-password">${icon('copy')} Copiar</button>
-              </div>
-              <p class="field-hint">Anote ou envie esta senha para o cliente. Ela não fica salva em nenhum lugar.</p>
-            </div>
-          `}
         </div>
 
         <p class="form-error" id="sa-store-error" hidden></p>
@@ -995,7 +1019,7 @@ function openStoreModal(store = null) {
   const pricesInput = modal.root.querySelector('#sa-store-prices');
   const clientNameInput = modal.root.querySelector('#sa-client-name');
   const clientEmailInput = modal.root.querySelector('#sa-client-email');
-  const passwordInput = modal.root.querySelector('#sa-client-password');
+  const canEditEmail = isEditing && store.authMode === 'google' && !usersByStore().get(store.id);
   let busy = false;
 
   function showError(message) {
@@ -1012,21 +1036,6 @@ function openStoreModal(store = null) {
     }
   });
 
-  modal.root.querySelectorAll('[data-action="generate-password"]').forEach((button) => {
-    button.addEventListener('click', () => {
-      passwordInput.value = generatePassword(10);
-      errorBox.hidden = true;
-      passwordInput.focus();
-    });
-  });
-
-  modal.root.querySelectorAll('[data-action="copy-password"]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const copied = await copyText(passwordInput.value);
-      showToast(copied ? 'Senha copiada para a área de transferência.' : 'Não foi possível copiar a senha.', copied ? 'success' : 'error');
-    });
-  });
-
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (busy) return;
@@ -1035,7 +1044,7 @@ function openStoreModal(store = null) {
     const storeName = nameInput.value.trim();
     const clientName = clientNameInput.value.trim();
     const clientEmail = String(clientEmailInput.value || '').trim().toLowerCase();
-    const password = passwordInput ? passwordInput.value : '';
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail);
 
     if (!storeName) {
       nameInput.focus();
@@ -1047,14 +1056,9 @@ function openStoreModal(store = null) {
       clientNameInput.reportValidity();
       return;
     }
-    if (!isEditing && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail)) {
+    if ((!isEditing || canEditEmail) && !emailValid) {
       clientEmailInput.focus();
       clientEmailInput.reportValidity();
-      return;
-    }
-    if (!isEditing && password.length < 6) {
-      passwordInput.focus();
-      passwordInput.reportValidity();
       return;
     }
 
@@ -1080,44 +1084,75 @@ function openStoreModal(store = null) {
           await setDoc(doc(db, 'users', client.uid), { name: clientName, updatedAt: now }, { merge: true });
         }
 
+        if (store.authMode === 'google' && !client) {
+          const invite = invitesByStore().get(store.id);
+          const currentInviteId = invite ? invite.id : '';
+          if (clientEmail !== currentInviteId) {
+            const existing = await getDoc(doc(db, 'storeInvites', clientEmail));
+            if (existing.exists() && String(existing.data().storeId || '') !== store.id) {
+              showError('Este e-mail Google já está convidado para outra loja.');
+              return;
+            }
+            const alreadyLinked = state.users.find((user) => String(user.email || '').toLowerCase() === clientEmail);
+            if (alreadyLinked) {
+              showError('Este e-mail já está vinculado a uma loja no portal.');
+              return;
+            }
+            await setDoc(doc(db, 'storeInvites', clientEmail), {
+              storeId: store.id,
+              email: clientEmail,
+              name: clientName,
+              createdAt: now,
+              updatedAt: now,
+            }, { merge: true });
+            if (currentInviteId) await deleteDoc(doc(db, 'storeInvites', currentInviteId)).catch(() => {});
+          } else if (currentInviteId) {
+            await setDoc(doc(db, 'storeInvites', currentInviteId), { name: clientName, updatedAt: now }, { merge: true });
+          }
+        }
+
         await loadData();
         modal.close();
         showToast('Loja atualizada com sucesso.');
       } else {
-        const storeId = await buildUniqueStoreId(storeName);
-        const created = await provisionClientAccount(clientEmail, password);
-        try {
-          const now = new Date().toISOString();
-          const batch = writeBatch(db);
-          batch.set(doc(db, 'stores', storeId), {
-            name: storeName,
-            slug: storeId,
-            whatsapp,
-            showPrices: pricesInput.checked,
-            status: 'active',
-            logoUrl: '',
-            logoPath: '',
-            createdAt: now,
-            updatedAt: now,
-          });
-          batch.set(doc(db, 'users', created.uid), {
-            role: 'client',
-            storeId,
-            name: clientName,
-            email: clientEmail,
-            createdAt: now,
-            updatedAt: now,
-          });
-          await batch.commit();
-        } catch (writeError) {
-          await created.rollback();
-          throw writeError;
+        const alreadyLinked = state.users.find((user) => String(user.email || '').toLowerCase() === clientEmail);
+        if (alreadyLinked) {
+          showError('Este e-mail já está vinculado a uma loja no portal. Use outro e-mail Google.');
+          return;
         }
-        await created.finish();
+        const existingInvite = await getDoc(doc(db, 'storeInvites', clientEmail));
+        if (existingInvite.exists()) {
+          showError('Este e-mail Google já está convidado para outra loja.');
+          return;
+        }
+
+        const storeId = await buildUniqueStoreId(storeName);
+        const now = new Date().toISOString();
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'stores', storeId), {
+          name: storeName,
+          slug: storeId,
+          whatsapp,
+          showPrices: pricesInput.checked,
+          status: 'active',
+          authMode: 'google',
+          logoUrl: '',
+          logoPath: '',
+          createdAt: now,
+          updatedAt: now,
+        });
+        batch.set(doc(db, 'storeInvites', clientEmail), {
+          storeId,
+          email: clientEmail,
+          name: clientName,
+          createdAt: now,
+          updatedAt: now,
+        });
+        await batch.commit();
 
         await loadData();
         modal.close();
-        openCredentialsModal(storeName, clientEmail, password);
+        openCredentialsModal(storeName, clientEmail);
       }
     } catch (error) {
       console.error(error);
@@ -1136,52 +1171,29 @@ function normalizeWhatsapp(value) {
   return digits.slice(0, 15);
 }
 
-async function provisionClientAccount(email, password) {
-  const appName = `provision-${randomId().slice(0, 8)}`;
-  const secondaryApp = initializeApp(firebaseConfig, appName);
-  const secondaryAuth = getAuth(secondaryApp);
-
-  try {
-    const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-    return {
-      uid: credential.user.uid,
-      async finish() {
-        await signOut(secondaryAuth).catch(() => {});
-        await deleteApp(secondaryApp).catch(() => {});
-      },
-      async rollback() {
-        try { await deleteUser(secondaryAuth.currentUser); } catch {}
-        await deleteApp(secondaryApp).catch(() => {});
-      },
-    };
-  } catch (error) {
-    await deleteApp(secondaryApp).catch(() => {});
-    throw error;
-  }
-}
-
-function openCredentialsModal(storeName, email, password) {
+function openCredentialsModal(storeName, email) {
+  const panelUrl = new URL('index.html', window.location.href).href;
   const modal = openModal(`
     <button class="icon-btn modal-floating-close" type="button" data-modal-close aria-label="Fechar">${icon('x')}</button>
     <div class="success-body">
       <span class="success-icon">${icon('check')}</span>
       <span class="eyebrow">Loja criada</span>
       <h2>${escapeHtml(storeName)} está pronta!</h2>
-      <p>Envie estes dados de acesso para o cliente. Por segurança, a senha aparece somente agora.</p>
+      <p>Envie o convite para o cliente. Ele entra no painel clicando em <strong>Entrar com Google</strong> — sem senha.</p>
       <div class="super-credentials">
         <div class="super-credentials-row">
-          <span>E-mail</span>
+          <span>E-mail Google</span>
           <strong>${escapeHtml(email)}</strong>
         </div>
         <div class="super-credentials-row">
-          <span>Senha inicial</span>
-          <strong>${escapeHtml(password)}</strong>
+          <span>Endereço do painel</span>
+          <strong>${escapeHtml(panelUrl)}</strong>
         </div>
       </div>
-      <p class="super-muted-note">O cliente entra pelo endereço do painel e pode trocar a senha depois.</p>
+      <p class="super-muted-note">Importante: o cliente precisa entrar com esta conta Google exata. Se ele usar outro e-mail, o convite não é reconhecido.</p>
     </div>
     <div class="modal-footer success-footer">
-      <button class="btn btn-secondary" type="button" data-copy-credentials>${icon('copy')} Copiar dados</button>
+      <button class="btn btn-secondary" type="button" data-copy-credentials>${icon('copy')} Copiar convite</button>
       <button class="btn btn-primary" type="button" data-modal-close>Concluir</button>
     </div>
   `, { className: 'modal-sm' });
@@ -1189,14 +1201,18 @@ function openCredentialsModal(storeName, email, password) {
   const copyButton = modal.root.querySelector('[data-copy-credentials]');
   if (copyButton) {
     copyButton.addEventListener('click', async () => {
-      const panelUrl = new URL('index.html', window.location.href).href;
-      const copied = await copyText(`Acesso ao painel MyStore\nE-mail: ${email}\nSenha: ${password}\nEndereço: ${panelUrl}`);
-      showToast(copied ? 'Dados copiados para a área de transferência.' : 'Não foi possível copiar os dados.', copied ? 'success' : 'error');
+      const copied = await copyText(`Acesso ao painel MyStore\nLoja: ${storeName}\nE-mail Google: ${email}\nEntre em: ${panelUrl}\nClique em "Entrar com Google" e escolha esta conta. Não é preciso senha.`);
+      showToast(copied ? 'Convite copiado para a área de transferência.' : 'Não foi possível copiar o convite.', copied ? 'success' : 'error');
     });
   }
 }
 
 async function resetClientPassword(store) {
+  if (store.authMode === 'google') {
+    showToast('Este cliente entra com o Google — não há senha para redefinir.', 'error', 5000);
+    return;
+  }
+
   const client = usersByStore().get(store.id);
   if (!client || !client.email) {
     showToast('Esta loja não tem um cliente com e-mail cadastrado.', 'error');
@@ -1221,9 +1237,11 @@ async function resetClientPassword(store) {
 
 async function deleteStore(store) {
   const client = usersByStore().get(store.id);
+  const invite = invitesByStore().get(store.id);
+  const accessEmail = client ? client.email : (invite ? invite.email : 'cliente');
   const confirmed = await confirmDialog({
     title: 'Excluir esta loja?',
-    message: `Todos os produtos, catálogos e o acesso de ${client ? client.email : 'cliente'} serão removidos. Os links de catálogo vão parar de funcionar. A conta de e-mail continua existindo no Firebase, mas sem acesso à loja.`,
+    message: `Todos os produtos, catálogos e o acesso de ${accessEmail} serão removidos. Os links de catálogo vão parar de funcionar. A conta de acesso continua existindo, mas sem permissão na loja.`,
     confirmLabel: 'Excluir loja',
   });
   if (!confirmed) return;
@@ -1248,9 +1266,11 @@ async function deleteStore(store) {
     }
 
     const userRefs = state.users.filter((user) => user.storeId === store.id).map((user) => doc(db, 'users', user.uid));
+    const inviteRefs = state.invites.filter((inviteDoc) => inviteDoc.storeId === store.id).map((inviteDoc) => doc(db, 'storeInvites', inviteDoc.id));
     const finalBatch = writeBatch(db);
     finalBatch.delete(doc(db, 'stores', store.id));
     userRefs.forEach((reference) => finalBatch.delete(reference));
+    inviteRefs.forEach((reference) => finalBatch.delete(reference));
     await finalBatch.commit();
 
     await loadData();
@@ -1265,7 +1285,7 @@ async function deleteStore(store) {
    -------------------------------------------------------------------------- */
 
 function exportCsv() {
-  const header = ['Loja', 'Endereço', 'Cliente', 'E-mail', 'Status', 'Produtos', 'Catálogos', 'Criada em'];
+  const header = ['Loja', 'Endereço', 'Cliente', 'E-mail', 'Acesso', 'Status', 'Produtos', 'Catálogos', 'Criada em'];
   const lines = state.stores.map((store) => {
     const client = usersByStore().get(store.id);
     const metric = storeMetrics(store.id);
@@ -1274,6 +1294,7 @@ function exportCsv() {
       store.id,
       client ? client.name : '',
       client ? client.email : '',
+      store.authMode === 'google' ? 'Google' : 'E-mail e senha',
       store.status === 'active' ? 'Ativa' : 'Pausada',
       metric.products == null ? '' : metric.products,
       metric.catalogs == null ? '' : metric.catalogs,
