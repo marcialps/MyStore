@@ -19,6 +19,11 @@ export const firebaseConfig = {
   measurementId: "G-QJ967SLCPM"
 };
 
+// Como as imagens são armazenadas:
+// 'firestore' = comprimidas dentro dos documentos do banco (não precisa de Cloud Storage)
+// 'storage'   = enviadas para o Cloud Storage (exige ativar o Storage no console)
+export const imageStorageMode = 'firestore';
+
 // Contas Google autorizadas a entrar no portal do super administrador.
 // Esta mesma lista precisa estar em firestore.rules (função isSuperAdmin).
 export const superAdminEmails = [

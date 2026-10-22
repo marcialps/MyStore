@@ -37,7 +37,7 @@ import {
   firebaseConfigured,
   CONFIG_ERROR_MESSAGE,
 } from './firebase.js';
-import { superAdminEmails } from './firebase-config.js';
+import { imageStorageMode, superAdminEmails } from './firebase-config.js';
 
 const state = {
   data: null,
@@ -433,17 +433,22 @@ function loadImageElement(source) {
 }
 
 async function compressImage(file, options = {}) {
-  if (!file || !String(file.type || '').startsWith('image/')) {
-    throw new Error('Escolha um arquivo de imagem.');
-  }
-  if (file.size > 25 * 1024 * 1024) {
-    throw new Error('A imagem é muito grande. Escolha um arquivo de até 25 MB.');
+  let dataUrl = '';
+  if (typeof file === 'string' && /^data:image\//.test(file)) {
+    dataUrl = file;
+  } else {
+    if (!file || !String(file.type || '').startsWith('image/')) {
+      throw new Error('Escolha um arquivo de imagem.');
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      throw new Error('A imagem é muito grande. Escolha um arquivo de até 25 MB.');
+    }
+    dataUrl = await readFileAsDataUrl(file);
   }
 
   const maxSize = options.maxSize || 1400;
   const quality = options.quality || 0.86;
   const keepAlpha = Boolean(options.keepAlpha);
-  const dataUrl = await readFileAsDataUrl(file);
   const image = await loadImageElement(dataUrl);
   const sourceWidth = image.naturalWidth || image.width || 1000;
   const sourceHeight = image.naturalHeight || image.height || 1000;
@@ -461,7 +466,28 @@ async function compressImage(file, options = {}) {
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = 'high';
   context.drawImage(image, 0, 0, width, height);
-  return canvas.toDataURL(keepAlpha ? 'image/png' : 'image/jpeg', quality);
+  return canvas.toDataURL(keepAlpha ? 'image/webp' : 'image/jpeg', quality);
+}
+
+// Reduz a imagem em etapas até caber no orçamento de bytes do documento.
+async function fitImageToBudget(dataUrl, options = {}) {
+  const budget = options.budget || 400000;
+  const keepAlpha = Boolean(options.keepAlpha);
+  let current = dataUrl;
+  let attemptSize = options.maxSize || 1000;
+  let attemptQuality = options.quality || 0.76;
+
+  for (let attempt = 0; attempt < 6 && current.length > budget; attempt += 1) {
+    attemptSize = Math.max(240, Math.round(attemptSize * 0.8));
+    attemptQuality = Math.max(0.45, attemptQuality - 0.08);
+    current = await compressImage(current, {
+      maxSize: attemptSize,
+      quality: attemptQuality,
+      keepAlpha,
+    });
+  }
+
+  return current.length <= budget ? current : '';
 }
 
 async function openCameraModal(onCapture) {
@@ -636,11 +662,13 @@ function firebaseErrorMessage(error, fallback = 'Não foi possível concluir a a
     'app/store-paused': 'Esta loja está desativada. Fale com o super administrador.',
     'permission-denied': 'Sua conta não tem permissão para acessar estes dados.',
     'unavailable': 'Não foi possível conectar ao banco de dados. Verifique sua internet.',
-    'storage/unauthorized': 'Sua conta não tem permissão para enviar imagens.',
+    'storage/unauthorized': 'Sua conta não tem permissão para enviar imagens. Publique o storage.rules atualizado no console do Firebase.',
     'storage/canceled': 'O envio da imagem foi cancelado.',
     'storage/retry-limit-exceeded': 'O envio demorou demais. Tente uma imagem menor.',
     'storage/quota-exceeded': 'O limite de armazenamento do Firebase foi atingido.',
-    'storage/unknown': 'Não foi possível enviar a imagem. Tente novamente.',
+    'storage/unknown': 'O Cloud Storage do Firebase não está ativado (ou o bucket configurado não existe). No console do Firebase, abra Storage > Começar e publique o storage.rules.',
+    'storage/object-not-found': 'O Cloud Storage do Firebase não está ativado. Abra Storage > Começar no console do Firebase.',
+    'storage/bucket-not-found': 'O bucket configurado não existe. Ative o Storage no console do Firebase e confira o storageBucket em firebase-config.js.',
   };
   return messages[code] || (error && error.message) || fallback;
 }
@@ -675,15 +703,31 @@ function dataUrlToBlob(dataUrl) {
 }
 
 async function uploadImage(dataUrl, folder) {
-  const blob = dataUrlToBlob(dataUrl);
-  const extension = blob.type === 'image/png' ? 'png' : (blob.type === 'image/webp' ? 'webp' : 'jpg');
-  const uid = auth && auth.currentUser ? auth.currentUser.uid : 'anonimo';
-  if (!state.storeId) throw new Error('Loja não identificada. Entre novamente.');
-  const path = `stores/${state.storeId}/${folder}/${uid}/${Date.now()}-${randomId()}.${extension}`;
-  const storageRef = ref(storage, path);
-  await uploadBytes(storageRef, blob, { contentType: blob.type });
-  const url = await getDownloadURL(storageRef);
-  return { url, path };
+  if (imageStorageMode === 'storage') {
+    const blob = dataUrlToBlob(dataUrl);
+    const extension = blob.type === 'image/png' ? 'png' : (blob.type === 'image/webp' ? 'webp' : 'jpg');
+    const uid = auth && auth.currentUser ? auth.currentUser.uid : 'anonimo';
+    if (!state.storeId) throw new Error('Loja não identificada. Entre novamente.');
+    const path = `stores/${state.storeId}/${folder}/${uid}/${Date.now()}-${randomId()}.${extension}`;
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, blob, { contentType: blob.type });
+    const url = await getDownloadURL(storageRef);
+    return { url, path };
+  }
+
+  // Modo Firestore: a imagem comprimida fica dentro do próprio documento,
+  // sem depender do Cloud Storage. O data URL precisa caber no limite de 1 MiB.
+  const isLogo = folder === 'logo';
+  const prepared = await fitImageToBudget(dataUrl, {
+    maxSize: isLogo ? 384 : 960,
+    quality: isLogo ? 0.84 : 0.72,
+    keepAlpha: isLogo,
+    budget: isLogo ? 120000 : 260000,
+  });
+  if (!prepared) {
+    throw new Error('A imagem ficou grande demais mesmo depois da compressão. Escolha uma foto menor ou com menos detalhes.');
+  }
+  return { url: prepared, path: '' };
 }
 
 async function removeImage(path) {
@@ -1667,7 +1711,7 @@ function openProductModal(product = null) {
     if (!file) return;
     setBusy(true);
     try {
-      const compressed = await compressImage(file, { maxSize: 1400, quality: 0.86 });
+      const compressed = await compressImage(file, { maxSize: 1200, quality: 0.82 });
       imageState.dataUrl = compressed;
       imageState.preview = compressed;
       errorBox.hidden = true;
