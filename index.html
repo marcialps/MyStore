@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#163b2f">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="MyStore — catálogos digitais personalizados com pedidos direto no WhatsApp.">
+  <title>MyStore — Painel da loja</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script type="module" src="/assets/admin.js"></script>
+</head>
+<body>
+  <div id="boot-screen" class="boot-screen">
+    <div class="boot-brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+      </span>
+      <span class="boot-name">MyStore</span>
+    </div>
+    <span class="spinner spinner-dark" aria-label="Carregando"></span>
+  </div>
+
+  <!-- Área de acesso -->
+  <div id="login-screen" class="login-screen is-hidden">
+    <section class="login-visual">
+      <div class="login-visual-top">
+        <div class="brand brand-light">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+          </span>
+          <span class="brand-name">MyStore<span class="brand-dot">.</span></span>
+        </div>
+      </div>
+
+      <div class="login-visual-copy">
+        <span class="eyebrow eyebrow-light">Catálogos sob medida</span>
+        <h1>Um catálogo.<br><em>Para cada cliente.</em></h1>
+        <p>Selecione seus produtos, crie um link exclusivo e envie. O cliente escolhe e o pedido chega pronto no seu WhatsApp.</p>
+      </div>
+
+      <div class="login-art" aria-hidden="true">
+        <div class="art-card art-card-back">
+          <div class="art-card-image alt"></div>
+          <span class="art-line w-60"></span>
+          <span class="art-line w-35"></span>
+        </div>
+        <div class="art-card art-card-main">
+          <div class="art-card-image">
+            <span class="art-coffee"></span>
+            <span class="art-tag">Selecionado</span>
+          </div>
+          <span class="art-line w-70"></span>
+          <span class="art-line w-45"></span>
+          <div class="art-card-bottom"><span class="art-price">R$ 89,90</span><span class="art-buy">Comprar</span></div>
+        </div>
+        <div class="art-badge">
+          <span class="art-badge-icon">
+            <svg class="icon"><use href="/assets/icons.svg#i-whatsapp"></use></svg>
+          </span>
+          <span><strong>Pedido enviado</strong><small>direto no WhatsApp</small></span>
+        </div>
+        <span class="art-orbit orbit-one"></span>
+        <span class="art-orbit orbit-two"></span>
+      </div>
+
+      <p class="login-visual-foot">Seu catálogo, do seu jeito.</p>
+    </section>
+
+    <section class="login-panel">
+      <div class="brand brand-mobile">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+        </span>
+        <span class="brand-name">MyStore<span class="brand-dot">.</span></span>
+      </div>
+
+      <div class="login-box">
+        <span class="eyebrow">Área do administrador</span>
+        <h2>Bem-vindo de volta</h2>
+        <p class="login-subtitle">Entre com a conta de administrador para gerenciar a loja e criar novos catálogos.</p>
+
+        <form id="login-form" novalidate>
+          <label class="field-label" for="login-email">E-mail</label>
+          <div class="auth-field">
+            <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-users"></use></svg>
+            <input id="login-email" name="email" type="email" autocomplete="username" placeholder="voce@exemplo.com" required>
+          </div>
+
+          <label class="field-label" for="login-password">Senha</label>
+          <div class="auth-field">
+            <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-lock"></use></svg>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Sua senha" required>
+            <button type="button" class="pin-toggle" id="toggle-password" aria-label="Mostrar senha">
+              <svg class="icon" aria-hidden="true"><use href="/assets/icons.svg#i-eye"></use></svg>
+            </button>
+          </div>
+
+          <p class="form-error" id="login-error" hidden></p>
+          <button class="btn btn-primary btn-block" type="submit" id="login-submit">
+            <span class="btn-label">Entrar no painel</span>
+            <span class="spinner btn-spinner is-hidden" aria-hidden="true"></span>
+          </button>
+          <button class="login-link" type="button" id="forgot-password">Esqueci minha senha</button>
+        </form>
+
+        <div class="auth-divider"><span>ou</span></div>
+        <button class="btn btn-google btn-block" type="button" id="google-login">
+          <svg class="icon google-icon" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          <span>Entrar com Google</span>
+        </button>
+        <p class="login-super-hint">Acesso do super administrador · <a href="/super.html">abrir portal</a></p>
+
+        <p class="login-hint">Acesso protegido pelo Firebase Authentication.<br>Clientes entram com o e-mail e a senha criados pelo super administrador.</p>
+      </div>
+
+      <p class="login-foot">MyStore © <span id="login-year"></span> · Catálogos que vendem</p>
+    </section>
+  </div>
+
+  <!-- Aplicação -->
+  <div id="admin-app" class="admin-shell is-hidden">
+    <button class="sidebar-backdrop" id="sidebar-backdrop" type="button" aria-label="Fechar menu"></button>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <a class="brand brand-light" href="#/visao" data-route="overview" aria-label="MyStore — início">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+          </span>
+          <span class="brand-name">MyStore<span class="brand-dot">.</span></span>
+        </a>
+        <button class="icon-btn sidebar-close" id="sidebar-close" type="button" aria-label="Fechar menu">
+          <svg class="icon"><use href="/assets/icons.svg#i-x"></use></svg>
+        </button>
+      </div>
+
+      <nav class="side-nav" aria-label="Menu principal">
+        <p class="nav-label">Gerenciamento</p>
+        <a class="nav-item" href="#/visao" data-route="overview">
+          <svg class="icon"><use href="/assets/icons.svg#i-grid"></use></svg>
+          <span>Visão geral</span>
+        </a>
+        <a class="nav-item" href="#/produtos" data-route="products">
+          <svg class="icon"><use href="/assets/icons.svg#i-box"></use></svg>
+          <span>Produtos</span>
+          <span class="nav-count" id="nav-products-count">0</span>
+        </a>
+        <a class="nav-item" href="#/catalogos" data-route="catalogs">
+          <svg class="icon"><use href="/assets/icons.svg#i-link"></use></svg>
+          <span>Catálogos</span>
+          <span class="nav-count" id="nav-catalogs-count">0</span>
+        </a>
+        <a class="nav-item" href="#/configuracoes" data-route="settings">
+          <svg class="icon"><use href="/assets/icons.svg#i-settings"></use></svg>
+          <span>Configurações</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-tip">
+        <span class="sidebar-tip-icon">
+          <svg class="icon"><use href="/assets/icons.svg#i-sparkles"></use></svg>
+        </span>
+        <p><strong>Dica rápida</strong><br>Crie um catálogo diferente para cada cliente.</p>
+      </div>
+
+      <div class="sidebar-foot">
+        <a class="portal-link is-hidden" id="portal-link" href="/super.html">
+          <svg class="icon"><use href="/assets/icons.svg#i-users"></use></svg>
+          <span>Portal do super administrador</span>
+        </a>
+        <a class="store-card" href="#/configuracoes" data-route="settings" aria-label="Configurações da loja">
+          <span class="store-avatar" id="sidebar-store-avatar">ML</span>
+          <span class="store-card-info">
+            <small>Sua loja</small>
+            <strong id="sidebar-store-name">Minha Loja</strong>
+          </span>
+          <svg class="icon store-card-arrow"><use href="/assets/icons.svg#i-chevron-right"></use></svg>
+        </a>
+        <button class="logout-btn" type="button" id="logout-btn">
+          <svg class="icon"><use href="/assets/icons.svg#i-logout"></use></svg>
+          <span>Sair do painel</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="mobile-header">
+        <button class="icon-btn" id="mobile-menu" type="button" aria-label="Abrir menu">
+          <svg class="icon"><use href="/assets/icons.svg#i-menu"></use></svg>
+        </button>
+        <div class="brand brand-mobile-dark">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+          </span>
+          <span class="brand-name">MyStore<span class="brand-dot">.</span></span>
+        </div>
+        <a class="icon-btn" href="#/produtos" aria-label="Gerenciar produtos">
+          <svg class="icon"><use href="/assets/icons.svg#i-box"></use></svg>
+        </a>
+      </header>
+
+      <main class="content" id="content" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <div class="noscript">Ative o JavaScript do navegador para usar o painel da MyStore.</div>
+  </noscript>
+
+  <script>
+    document.getElementById('login-year').textContent = new Date().getFullYear();
+
+    // Rede de segurança do carregamento: os módulos do Firebase vêm de
+    // www.gstatic.com. Se a rede, um bloqueador ou uma extensão impedir o
+    // download, o painel nunca inicia e a tela ficaria no spinner para sempre.
+    (function () {
+      var booted = false;
+      var timer = null;
+
+      function showBootError(message) {
+        if (booted) return;
+        var screen = document.getElementById('boot-screen');
+        if (!screen || screen.classList.contains('is-hidden')) return;
+        booted = true;
+        window.clearTimeout(timer);
+        screen.innerHTML =
+          '<div class="boot-error">' +
+            '<div class="boot-brand">' +
+              '<span class="brand-mark" aria-hidden="true">' +
+                '<svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>' +
+              '</span>' +
+              '<span class="boot-name">MyStore</span>' +
+            '</div>' +
+            '<h1>Não foi possível carregar o painel</h1>' +
+            '<p>' + message + '</p>' +
+            '<button class="btn btn-primary" type="button" id="boot-retry">Tentar novamente</button>' +
+            '<small>Se continuar, abra o console do navegador (F12) para ver o erro.</small>' +
+          '</div>';
+        var retry = document.getElementById('boot-retry');
+        if (retry) retry.addEventListener('click', function () { window.location.reload(); });
+      }
+
+      window.__mystoreBooted = function () {
+        booted = true;
+        window.clearTimeout(timer);
+      };
+
+      timer = window.setTimeout(function () {
+        showBootError(
+          navigator.onLine === false
+            ? 'Você parece estar sem conexão com a internet. Verifique sua rede e tente novamente.'
+            : 'Os arquivos do Firebase não carregaram. Verifique sua conexão e desative bloqueadores de anúncios para este site.'
+        );
+      }, 15000);
+
+      window.addEventListener('error', function (event) {
+        if (event.target && event.target.tagName === 'SCRIPT') {
+          showBootError('Os arquivos do Firebase não carregaram. Verifique sua conexão e desative bloqueadores de anúncios para este site.');
+        }
+      }, true);
+    })();
+  </script>
+</body>
+</html>

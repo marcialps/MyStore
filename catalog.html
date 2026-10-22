@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f5f2ea">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Catálogo exclusivo</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://firebasestorage.googleapis.com" crossorigin>
+  <link rel="stylesheet" href="/assets/catalog.css">
+  <script type="module" src="/assets/catalog.js"></script>
+</head>
+<body>
+  <div class="catalog-boot" id="catalog-boot">
+    <span class="boot-spinner" aria-label="Carregando catálogo"></span>
+    <span class="boot-text">Preparando seu catálogo</span>
+  </div>
+
+  <section class="catalog-error is-hidden" id="catalog-error">
+    <div class="error-card">
+      <span class="error-icon">
+        <svg class="icon"><use href="/assets/icons.svg#i-link"></use></svg>
+      </span>
+      <span class="error-eyebrow">Catálogo indisponível</span>
+      <h1 id="error-title">Não encontramos este catálogo.</h1>
+      <p id="error-message">O link pode ter sido removido ou está incompleto. Entre em contato com a loja para receber uma nova seleção.</p>
+      <button class="error-button" type="button" onclick="window.location.reload()">Tentar novamente</button>
+    </div>
+    <p class="error-foot">Catálogo digital · MyStore</p>
+  </section>
+
+  <div class="catalog-app is-hidden" id="catalog-app">
+    <header class="shop-header">
+      <div class="shop-header-inner">
+        <div class="shop-brand" id="shop-brand"></div>
+        <div class="shop-contact">
+          <span class="shop-contact-dot"></span>
+          Atendimento via WhatsApp
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="catalog-hero" id="catalog-hero">
+        <span class="hero-orbit orbit-a" aria-hidden="true"></span>
+        <span class="hero-orbit orbit-b" aria-hidden="true"></span>
+        <div class="hero-copy">
+          <span class="catalog-eyebrow">
+            <span class="eyebrow-line"></span>
+            Catálogo exclusivo
+          </span>
+          <h1>Escolha o que<br><em>combina com você.</em></h1>
+          <p class="hero-subtitle" id="hero-subtitle"></p>
+          <div class="hero-actions">
+            <span class="hero-pill">
+              <svg class="icon"><use href="/assets/icons.svg#i-bag"></use></svg>
+              Selecione seus favoritos
+            </span>
+            <span class="hero-note">O pedido é enviado direto no WhatsApp.</span>
+          </div>
+        </div>
+        <div class="hero-art is-hidden" id="hero-art" aria-hidden="true"></div>
+      </section>
+
+      <section class="products-section">
+        <div class="products-section-head">
+          <div>
+            <span class="section-eyebrow">Seleção especial</span>
+            <h2>Produtos para você</h2>
+          </div>
+          <span class="products-count" id="products-count"></span>
+        </div>
+
+        <div class="public-products-grid" id="public-products"></div>
+
+        <div class="catalog-empty is-hidden" id="catalog-empty">
+          <span class="catalog-empty-icon">
+            <svg class="icon"><use href="/assets/icons.svg#i-box"></use></svg>
+          </span>
+          <h3>Nenhum produto disponível</h3>
+          <p>Esta seleção está sendo atualizada. Volte em breve ou fale com a loja.</p>
+        </div>
+      </section>
+
+      <footer class="shop-footer">
+        <div class="footer-brand" id="footer-brand"></div>
+        <p>Catálogo digital feito para você.</p>
+      </footer>
+    </main>
+
+    <div class="cart-bar" id="cart-bar" hidden>
+      <div class="cart-summary">
+        <span class="cart-bag">
+          <svg class="icon"><use href="/assets/icons.svg#i-bag"></use></svg>
+          <span class="cart-badge" id="cart-badge">0</span>
+        </span>
+        <span class="cart-summary-text">
+          <strong id="cart-title">0 itens</strong>
+          <span id="cart-total"></span>
+        </span>
+      </div>
+      <button class="buy-button" type="button" id="buy-button">
+        <svg class="icon"><use href="/assets/icons.svg#i-whatsapp"></use></svg>
+        Comprar
+      </button>
+    </div>
+
+    <div class="catalog-toast" id="catalog-toast" role="status" aria-live="polite"></div>
+  </div>
+</body>
+</html>

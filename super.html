@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#163b2f">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="MyStore — portal do super administrador.">
+  <title>MyStore — Portal do super administrador</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/super.css">
+  <script type="module" src="/assets/super.js"></script>
+</head>
+<body class="super-body">
+  <div id="super-boot" class="boot-screen">
+    <div class="boot-brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+      </span>
+      <span class="boot-name">MyStore</span>
+    </div>
+    <span class="spinner spinner-dark" aria-label="Carregando"></span>
+  </div>
+
+  <!-- Acesso do super administrador -->
+  <div id="super-login" class="super-login is-hidden">
+    <div class="super-login-card">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+        </span>
+        <span class="brand-name">MyStore<span class="brand-dot">.</span></span>
+      </div>
+      <span class="eyebrow">Super administrador</span>
+      <h1>Crie lojas.<br><em>Gerencie clientes.</em></h1>
+      <p class="super-login-copy">Entre com a conta Google autorizada para cadastrar novos clientes, abrir o painel de cada loja e acompanhar os relatórios.</p>
+
+      <button class="btn btn-google btn-lg btn-block" type="button" id="super-google">
+        <svg class="icon google-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        <span>Entrar com Google</span>
+      </button>
+
+      <p class="form-error" id="super-login-error" hidden></p>
+      <p class="super-login-hint">Acesso liberado somente para <strong id="super-allowed-email">a conta autorizada</strong>.</p>
+      <a class="super-login-link" href="/index.html">Acesso de cliente / loja</a>
+    </div>
+  </div>
+
+  <!-- Portal -->
+  <div id="super-app" class="admin-shell is-hidden">
+    <button class="sidebar-backdrop" id="super-backdrop" type="button" aria-label="Fechar menu"></button>
+
+    <aside class="sidebar" id="super-sidebar">
+      <div class="sidebar-head">
+        <a class="brand brand-light" href="#/visao" aria-label="MyStore — visão geral">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+          </span>
+          <span class="brand-name">MyStore<span class="brand-dot">.</span></span>
+        </a>
+        <button class="icon-btn sidebar-close" id="super-sidebar-close" type="button" aria-label="Fechar menu">
+          <svg class="icon"><use href="/assets/icons.svg#i-x"></use></svg>
+        </button>
+      </div>
+
+      <nav class="side-nav" aria-label="Menu principal">
+        <p class="nav-label">Gestão</p>
+        <a class="nav-item" href="#/visao" data-view="dashboard">
+          <svg class="icon"><use href="/assets/icons.svg#i-grid"></use></svg>
+          <span>Visão geral</span>
+        </a>
+        <a class="nav-item" href="#/lojas" data-view="stores">
+          <svg class="icon"><use href="/assets/icons.svg#i-store"></use></svg>
+          <span>Lojas e clientes</span>
+          <span class="nav-count" id="super-stores-count">0</span>
+        </a>
+        <a class="nav-item" href="#/relatorios" data-view="reports">
+          <svg class="icon"><use href="/assets/icons.svg#i-list"></use></svg>
+          <span>Relatórios</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-tip">
+        <span class="sidebar-tip-icon">
+          <svg class="icon"><use href="/assets/icons.svg#i-sparkles"></use></svg>
+        </span>
+        <p><strong>Dica rápida</strong><br>Cada loja tem painel, produtos e link de catálogo próprios.</p>
+      </div>
+
+      <div class="sidebar-foot">
+        <div class="store-card super-account">
+          <span class="store-avatar" id="super-avatar">SA</span>
+          <span class="store-card-info">
+            <small>Super administrador</small>
+            <strong id="super-email">—</strong>
+          </span>
+        </div>
+        <button class="logout-btn" type="button" id="super-logout">
+          <svg class="icon"><use href="/assets/icons.svg#i-logout"></use></svg>
+          <span>Sair do portal</span>
+        </button>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="mobile-header">
+        <button class="icon-btn" id="super-menu" type="button" aria-label="Abrir menu">
+          <svg class="icon"><use href="/assets/icons.svg#i-menu"></use></svg>
+        </button>
+        <div class="brand brand-mobile-dark">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>
+          </span>
+          <span class="brand-name">MyStore<span class="brand-dot">.</span></span>
+        </div>
+        <button class="icon-btn" type="button" data-action="new-store" aria-label="Nova loja">
+          <svg class="icon"><use href="/assets/icons.svg#i-plus"></use></svg>
+        </button>
+      </header>
+
+      <main class="content" id="super-content" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite"></div>
+
+  <script>
+    // Rede de segurança: se o módulo do portal não carregar, mostra um erro
+    // em vez de deixar a tela presa no spinner.
+    (function () {
+      var booted = false;
+      var timer = null;
+
+      function showBootError(message) {
+        if (booted) return;
+        var screen = document.getElementById('super-boot');
+        if (!screen || screen.classList.contains('is-hidden')) return;
+        booted = true;
+        window.clearTimeout(timer);
+        screen.innerHTML =
+          '<div class="boot-error">' +
+            '<div class="boot-brand">' +
+              '<span class="brand-mark" aria-hidden="true">' +
+                '<svg viewBox="0 0 32 32"><path d="M8 23V9h4l4 7 4-7h4v14h-4v-8l-4 6-4-6v8H8Z" fill="currentColor"/></svg>' +
+              '</span>' +
+              '<span class="boot-name">MyStore</span>' +
+            '</div>' +
+            '<h1>Não foi possível carregar o portal</h1>' +
+            '<p>' + message + '</p>' +
+            '<button class="btn btn-primary" type="button" id="super-retry">Tentar novamente</button>' +
+            '<small>Se continuar, abra o console do navegador (F12) para ver o erro.</small>' +
+          '</div>';
+        var retry = document.getElementById('super-retry');
+        if (retry) retry.addEventListener('click', function () { window.location.reload(); });
+      }
+
+      window.__mystoreBooted = function () {
+        booted = true;
+        window.clearTimeout(timer);
+      };
+
+      timer = window.setTimeout(function () {
+        showBootError(
+          navigator.onLine === false
+            ? 'Você parece estar sem conexão com a internet. Verifique sua rede e tente novamente.'
+            : 'Os arquivos do Firebase não carregaram. Verifique sua conexão e desative bloqueadores de anúncios para este site.'
+        );
+      }, 15000);
+
+      window.addEventListener('error', function (event) {
+        if (event.target && event.target.tagName === 'SCRIPT') {
+          showBootError('Os arquivos do Firebase não carregaram. Verifique sua conexão e desative bloqueadores de anúncios para este site.');
+        }
+      }, true);
+    })();
+  </script>
+</body>
+</html>
