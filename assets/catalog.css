@@ -946,6 +946,182 @@ img {
 }
 
 /* --------------------------------------------------------------------------
+   Convite MyStore
+   -------------------------------------------------------------------------- */
+
+.catalog-cta {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 40px 14px;
+}
+
+.catalog-cta-link {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: min(100%, 880px);
+  margin: 0 auto;
+  padding: 13px 15px 13px 17px;
+  overflow: hidden;
+  border: 1px solid rgba(216, 183, 123, 0.46);
+  border-radius: 999px;
+  background:
+    radial-gradient(120% 230% at 0% -50%, rgba(216, 183, 123, 0.3), transparent 52%),
+    linear-gradient(112deg, var(--forest-950) 0%, var(--forest) 56%, var(--forest-700) 100%);
+  box-shadow:
+    0 18px 42px rgba(13, 39, 31, 0.18),
+    0 2px 8px rgba(13, 39, 31, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  color: var(--paper);
+  text-decoration: none;
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition),
+    border-color var(--transition);
+}
+
+.catalog-cta-link::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: -140%;
+  bottom: -140%;
+  left: -220px;
+  width: 150px;
+  background: linear-gradient(100deg, transparent, rgba(255, 253, 248, 0.16), transparent);
+  transform: rotate(16deg);
+  transition: left 800ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.catalog-cta-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(234, 216, 181, 0.75);
+  box-shadow:
+    0 24px 54px rgba(13, 39, 31, 0.24),
+    0 4px 12px rgba(13, 39, 31, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.catalog-cta-link:hover::before {
+  left: calc(100% + 70px);
+}
+
+.catalog-cta-link > * {
+  position: relative;
+  z-index: 1;
+}
+
+.catalog-cta-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(234, 216, 181, 0.32);
+  border-radius: 50%;
+  background: rgba(255, 253, 248, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  color: var(--gold-light);
+  transition:
+    transform var(--transition),
+    background var(--transition),
+    color var(--transition);
+}
+
+.catalog-cta-icon .icon {
+  width: 21px;
+  height: 21px;
+}
+
+.catalog-cta-link:hover .catalog-cta-icon {
+  transform: rotate(-6deg) scale(1.04);
+  background: var(--gold-light);
+  color: var(--forest-950);
+}
+
+.catalog-cta-text {
+  flex: 1;
+  min-width: 0;
+  color: rgba(255, 253, 248, 0.92);
+  font-family: var(--serif);
+  font-size: clamp(14px, 1.35vw, 17px);
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.catalog-cta-text strong {
+  position: relative;
+  color: var(--gold-light);
+  font-style: italic;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.catalog-cta-text strong::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -2px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.55;
+  transform: scaleX(0.4);
+  transition:
+    opacity var(--transition),
+    transform var(--transition);
+}
+
+.catalog-cta-link:hover .catalog-cta-text strong::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.catalog-cta-arrow {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(234, 216, 181, 0.22);
+  border-radius: 50%;
+  color: var(--gold-light);
+  transition:
+    transform var(--transition),
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.catalog-cta-arrow .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.catalog-cta-link:hover .catalog-cta-arrow {
+  transform: translateX(3px);
+  border-color: rgba(234, 216, 181, 0.45);
+  background: rgba(234, 216, 181, 0.12);
+}
+
+.catalog-cta-spark {
+  position: absolute;
+  top: 7px;
+  right: 13%;
+  color: rgba(234, 216, 181, 0.6);
+  transform: rotate(12deg);
+}
+
+.catalog-cta-spark .icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* --------------------------------------------------------------------------
    Rodapé
    -------------------------------------------------------------------------- */
 
@@ -1340,6 +1516,41 @@ img {
     height: 27px;
   }
 
+  .catalog-cta {
+    padding: 0 20px 10px;
+  }
+
+  .catalog-cta-link {
+    gap: 11px;
+    padding: 11px 13px;
+    border-radius: 22px;
+  }
+
+  .catalog-cta-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .catalog-cta-icon .icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .catalog-cta-text {
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  .catalog-cta-arrow {
+    width: 30px;
+    height: 30px;
+  }
+
+  .catalog-cta-spark {
+    display: none;
+  }
+
   .shop-footer {
     flex-direction: column;
     align-items: flex-start;
@@ -1386,6 +1597,19 @@ img {
 }
 
 @media (max-width: 460px) {
+  .catalog-cta-link {
+    gap: 9px;
+    padding: 10px 12px;
+  }
+
+  .catalog-cta-text {
+    font-size: 12px;
+  }
+
+  .catalog-cta-arrow {
+    display: none;
+  }
+
   .public-products-grid {
     grid-template-columns: 1fr;
   }
