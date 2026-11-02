@@ -269,7 +269,7 @@ function syncBodyLock() {
 function openModal(markup, options = {}) {
   const id = ++modalSequence;
   const backdrop = document.createElement('div');
-  backdrop.className = 'modal-backdrop';
+  backdrop.className = `modal-backdrop${options.backdropClassName ? ` ${options.backdropClassName}` : ''}`;
   backdrop.innerHTML = `<div class="modal-card ${options.className || ''}" role="dialog" aria-modal="true" tabindex="-1">${markup}</div>`;
   modalRoot.appendChild(backdrop);
 
@@ -533,6 +533,7 @@ async function openCameraModal(onCapture) {
     <input type="file" id="camera-fallback-input" accept="image/*" capture="environment" hidden>
   `, {
     className: 'modal-camera',
+    backdropClassName: 'modal-camera-backdrop',
     onClose: stopStream,
   });
 
@@ -598,11 +599,24 @@ async function openCameraModal(onCapture) {
 
   captureButton.addEventListener('click', () => {
     if (video.hidden || !video.videoWidth) return;
+
+    // O vídeo é exibido com object-fit: cover. Recortamos a captura na mesma
+    // proporção da área visível para que a foto saia igual ao enquadramento.
+    const frameWidth = video.videoWidth;
+    const frameHeight = video.videoHeight;
+    const viewWidth = video.clientWidth || frameWidth;
+    const viewHeight = video.clientHeight || frameHeight;
+    const coverScale = Math.max(viewWidth / frameWidth, viewHeight / frameHeight);
+    const cropWidth = Math.min(frameWidth, viewWidth / coverScale);
+    const cropHeight = Math.min(frameHeight, viewHeight / coverScale);
+    const sourceX = (frameWidth - cropWidth) / 2;
+    const sourceY = (frameHeight - cropHeight) / 2;
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = Math.round(cropWidth);
+    canvas.height = Math.round(cropHeight);
     const context = canvas.getContext('2d');
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    context.drawImage(video, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
       if (!blob) {
         showToast('Não foi possível capturar a foto.', 'error');

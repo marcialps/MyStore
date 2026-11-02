@@ -3895,6 +3895,67 @@ ul {
   }
 }
 
+/* Câmera em tela cheia no celular e no tablet */
+
+@media (max-width: 1024px) {
+  .modal-camera-backdrop {
+    align-items: stretch;
+    padding: 0;
+    background: #07110d;
+    backdrop-filter: none;
+  }
+
+  .modal-camera-backdrop .modal-card.modal-camera {
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    animation: none;
+  }
+
+  .modal-camera-backdrop .camera-header {
+    align-items: center;
+    padding: calc(14px + env(safe-area-inset-top)) 18px 14px;
+    background: #0c1a15;
+  }
+
+  .modal-camera-backdrop .camera-header p {
+    display: none;
+  }
+
+  .modal-camera-backdrop .camera-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .modal-camera-backdrop .camera-stage {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: auto;
+  }
+
+  .modal-camera-backdrop .camera-footer {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .modal-camera-backdrop .camera-footer .btn-secondary {
+    justify-self: start;
+  }
+
+  .modal-camera-backdrop .camera-footer .capture-btn {
+    grid-column: 2;
+  }
+}
+
 @media (max-width: 420px) {
   .products-grid {
     grid-template-columns: 1fr;
